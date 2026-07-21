@@ -5,7 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import discord
 from discord.ext import commands
 
-# 1. Server giả giữ cho Render không bị Port Scan Timeout
+# 1. Server giả giữ cho Render không bị Port Timeout
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -29,7 +29,33 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"🤖 Bot {bot.user} đã online!")
 
-# --- DANH SÁCH LỆNH ---
+# 3. Lắng nghe mọi tin nhắn (Bắt được cả dính liền lẫn có khoảng cách)
+@bot.event
+async def on_message(message):
+    # Không phản hồi tin nhắn của chính bot
+    if message.author == bot.user:
+        return
+
+    content = message.content.strip()
+
+    # Xử lý riêng cho lệnh !print
+    if content.startswith("!print"):
+        # Lấy phần còn lại đằng sau chữ !print
+        rest = content[6:].strip()
+        
+        # Lọc đúng cú pháp ("nội dung") hoặc ('nội dung')
+        match = re.search(r'^\(\s*["\'“”](.*?)["\'“”]\s*\)$', rest)
+        if match:
+            text_to_send = match.group(1)
+            await message.channel.send(text_to_send)
+        else:
+            await message.channel.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
+        return
+
+    # Để các lệnh khác (!hi, !khen, !gay) vẫn chạy bình thường
+    await bot.process_commands(message)
+
+# --- CÁC LỆNH KHÁC ---
 @bot.command()
 async def hi(ctx):
     await ctx.send("lô")
@@ -41,22 +67,6 @@ async def khen(ctx):
 @bot.command()
 async def gay(ctx):
     await ctx.send("gay là bạn hả?")
-
-# Lệnh print nhận cả gõ dính !print("a") lẫn gõ cách !print ("a")
-@bot.command()
-async def print(ctx, *, text: str = None):
-    if not text:
-        await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
-        return
-    
-    # Dùng Regex lọc lấy chính xác chữ nằm trong ("...") hoặc ('...')
-    match = re.search(r'^\s*\(\s*["\'“”](.*?)["\'“”]\s*\)\s*$', text)
-    
-    if match:
-        content = match.group(1)
-        await ctx.send(content)
-    else:
-        await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
 
 token = os.environ.get('BOT_TOKEN')
 bot.run(token)
