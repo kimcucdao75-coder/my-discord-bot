@@ -4,7 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import discord
 from discord.ext import commands
 
-# 1. Server giả giúp Render không bị lỗi Port Timeout
+# 1. Web server giả (tránh Render bị Port Timeout)
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -18,7 +18,7 @@ def run_web_server():
 
 threading.Thread(target=run_web_server, daemon=True).start()
 
-# 2. Khởi tạo Discord Bot
+# 2. Khởi tạo Bot
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -26,9 +26,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"🤖 Bot {bot.user} đã online thành công!")
+    print(f"🤖 Bot {bot.user} đã online!")
 
-# --- Danh sách các lệnh ---
+# --- Các lệnh cơ bản ---
 @bot.command()
 async def hi(ctx):
     await ctx.send("lô")
@@ -41,20 +41,32 @@ async def khen(ctx):
 async def gay(ctx):
     await ctx.send("gay là bạn hả?")
 
-# Lệnh print siêu linh hoạt (không lo lỗi cú pháp/dấu ngoặc)
+# Lệnh print BẮT BUỘC cú pháp ("...")
 @bot.command()
 async def print(ctx, *, text: str = None):
     if text is None:
-        await ctx.send("⚠️ Bạn chưa nhập nội dung! Ví dụ: `!print gay`")
+        await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
         return
     
-    # Cắt sạch các loại dấu ngoặc nếu lỡ gõ vào
-    cleaned = text.strip().strip('()').strip('"\'“”')
+    text = text.strip()
     
-    if cleaned:
-        await ctx.send(cleaned)
-    else:
-        await ctx.send("⚠️ Nội dung trống rồi bạn ơi!")
+    # Kiểm tra dấu ( mở đầu và ) kết thúc
+    if text.startswith('(') and text.endswith(')'):
+        inner = text[1:-1].strip()
+        
+        # Kiểm tra dấu ngoặc kép bên trong (chấp nhận cả " ' “ ”)
+        if (inner.startswith('"') and inner.endswith('"')) or \
+           (inner.startswith("'") and inner.endswith("'")) or \
+           (inner.startswith('“') and inner.endswith('”')) or \
+           (inner.startswith('“') and inner.endswith('“')) or \
+           (inner.startswith('”') and inner.endswith('”')):
+            
+            content = inner[1:-1]
+            await ctx.send(content)
+            return
+            
+    # Nếu gõ thiếu ngoặc hoặc sai dạng -> Báo lỗi
+    await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
 
 token = os.environ.get('BOT_TOKEN')
 bot.run(token)
