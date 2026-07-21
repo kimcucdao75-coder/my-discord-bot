@@ -1,10 +1,11 @@
 import os
+import re
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import discord
 from discord.ext import commands
 
-# 1. Web server giả (tránh Render bị Port Timeout)
+# 1. Server giả giữ cho Render không bị Port Scan Timeout
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -18,7 +19,7 @@ def run_web_server():
 
 threading.Thread(target=run_web_server, daemon=True).start()
 
-# 2. Khởi tạo Bot
+# 2. Khởi tạo Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -28,7 +29,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"🤖 Bot {bot.user} đã online!")
 
-# --- Các lệnh cơ bản ---
+# --- DANH SÁCH LỆNH ---
 @bot.command()
 async def hi(ctx):
     await ctx.send("lô")
@@ -41,32 +42,21 @@ async def khen(ctx):
 async def gay(ctx):
     await ctx.send("gay là bạn hả?")
 
-# Lệnh print BẮT BUỘC cú pháp ("...")
+# Lệnh print nhận cả gõ dính !print("a") lẫn gõ cách !print ("a")
 @bot.command()
 async def print(ctx, *, text: str = None):
-    if text is None:
+    if not text:
         await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
         return
     
-    text = text.strip()
+    # Dùng Regex lọc lấy chính xác chữ nằm trong ("...") hoặc ('...')
+    match = re.search(r'^\s*\(\s*["\'“”](.*?)["\'“”]\s*\)\s*$', text)
     
-    # Kiểm tra dấu ( mở đầu và ) kết thúc
-    if text.startswith('(') and text.endswith(')'):
-        inner = text[1:-1].strip()
-        
-        # Kiểm tra dấu ngoặc kép bên trong (chấp nhận cả " ' “ ”)
-        if (inner.startswith('"') and inner.endswith('"')) or \
-           (inner.startswith("'") and inner.endswith("'")) or \
-           (inner.startswith('“') and inner.endswith('”')) or \
-           (inner.startswith('“') and inner.endswith('“')) or \
-           (inner.startswith('”') and inner.endswith('”')):
-            
-            content = inner[1:-1]
-            await ctx.send(content)
-            return
-            
-    # Nếu gõ thiếu ngoặc hoặc sai dạng -> Báo lỗi
-    await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
+    if match:
+        content = match.group(1)
+        await ctx.send(content)
+    else:
+        await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
 
 token = os.environ.get('BOT_TOKEN')
 bot.run(token)
