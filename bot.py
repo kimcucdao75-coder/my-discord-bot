@@ -1,53 +1,20 @@
-import os
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import discord
-from discord.ext import commands
-
-# Server giả giúp Render không bị lỗi Port Scan Timeout
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is alive!")
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
-    server.serve_forever()
-
-threading.Thread(target=run_web_server, daemon=True).start()
-
-# Discord Bot
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-@bot.event
-async def on_ready():
-    print(f"🤖 Bot {bot.user} đã online!")
-
-@bot.command()
-async def hi(ctx):
-    await ctx.send("lô")
-
-@bot.command()
-async def khen(ctx):
-    await ctx.send("khuaaoxanh depzai lam do")
-
-@bot.command()
-async def gay(ctx):
-    await ctx.send("gay là bạn hả?")
-
 @bot.command()
 async def print(ctx, *, text: str):
-    if text.startswith('("') and text.endswith('")'):
-        await ctx.send(text[2:-2])
-    elif text.startswith("('") and text.endswith("')"):
-        await ctx.send(text[2:-2])
+    # Xóa bớt khoảng trắng thừa 2 đầu
+    text = text.strip()
+    
+    # Kiểm tra xem có bắt đầu bằng ( và kết thúc bằng ) không
+    if text.startswith('(') and text.endswith(')'):
+        # Cắt bỏ 2 dấu ngoặc đơn ở 2 đầu: ( ... )
+        inner = text[1:-1].strip()
+        
+        # Nếu bên trong có dấu ngoặc kép/đơn (kể cả dấu ngoặc cong điện thoại), cắt tiếp
+        if (inner.startswith('"') and inner.endswith('"')) or \
+           (inner.startswith("'") and inner.endswith("'")) or \
+           (inner.startswith('“') and inner.endswith('”')) or \
+           (inner.startswith('”') and inner.endswith('”')):
+            inner = inner[1:-1]
+            
+        await ctx.send(inner)
     else:
-        await ctx.send('⚠️ Sai cú pháp! Dùng dạng: `!print("nội dung")`')
-
-token = os.environ.get('BOT_TOKEN')
-bot.run(token)
+        await ctx.send('⚠️ Cú pháp sai rồi! Bạn phải gõ đúng dạng: `!print("nội dung")`')
